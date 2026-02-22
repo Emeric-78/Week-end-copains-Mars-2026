@@ -1,0 +1,10 @@
+[
+  {
+    "id": 1,
+    "nom": "Paris – point de test",
+    "latitude": 48.8566,
+    "longitude": 2.3522,
+    "description": "Premier point issu d’un fichier de données",
+    "categorie": "test"
+  }
+]
