@@ -1,42 +1,7 @@
 [
-  {
-    "id": "P1",
-    "nom": "Famille Bibis",
-    "adresse": "476 rue Sainte-Galerie, L’Île d’Albe, 17430 Muron",
-    "lat": 46.00851,
-    "lon": -0.863018,
-    "etat": "oui"
-  },
-  {
-    "id": "P2",
-    "nom": "Famille Gueds",
-    "adresse": "Hôpital Saint-Louis, 1 Av. Claude Vellefaux, 75010 Paris",
-    "lat": 48.87339,
-    "lon": 2.36974669,
-    "etat": "oui"
-  },
-  {
-    "id": "P3",
-    "nom": "Famille Chatons",
-    "adresse": "6 rue de la Pépinière, 75008 Paris",
-    "lat": 48.8752425,
-    "lon": 2.3231338,
-    "etat": "oui"
-  },
-  {
-    "id": "P4",
-    "nom": "Famille Ducs",
-    "adresse": "1 Le Hameau des Petites Haies, 78700 Conflans-Sainte-Honorine",
-    "lat": 48.994613,
-    "lon": 2.078692,
-    "etat": "oui"
-  },
-  {
-    "id": "P5",
-    "nom": "Marie & Etienne",
-    "adresse": "25 rue Émile Guillaumin, 03500 Saint-Pourçain-sur-Sioule",
-    "lat": 46.3057595,
-    "lon": 3.3024448,
-    "etat": "non"
-  }
+  { "id":"P1", "nom":"Famille Bibis",   "adresse":"476 rue Sainte-Galerie, 17430 Muron",                    "lat":46.00851, "lon":-0.863018,  "etat":"oui" },
+  { "id":"P2", "nom":"Famille Gueds",   "adresse":"Hôpital Saint-Louis, 1 Av. Claude Vellefaux, 75010 Paris","lat":48.87339, "lon":2.36974669, "etat":"oui" },
+  { "id":"P3", "nom":"Famille Chatons", "adresse":"6 rue de la Pépinière, 75008 Paris",                     "lat":48.8752425,"lon":2.3231338,  "etat":"oui" },
+  { "id":"P4", "nom":"Famille Ducs",    "adresse":"1 Le Hameau des Petites Haies, 78700 Conflans",          "lat":48.994613, "lon":2.078692,   "etat":"oui" },
+  { "id":"P5", "nom":"Marie & Etienne", "adresse":"25 rue Émile Guillaumin, 03500 Saint-Pourçain-sur-Sioule","lat":46.3057595,"lon":3.3024448,  "etat":"non" }
 ]
