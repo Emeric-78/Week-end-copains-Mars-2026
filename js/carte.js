@@ -1,4 +1,4 @@
-// ---------- Helpers ----------
+// ===== Helpers =====
 async function loadJSON(url) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Erreur de chargement: ${url}`);
@@ -10,10 +10,26 @@ const isFiniteNum = v => Number.isFinite(parseFloat(v));
 function fromCache(key){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch { return null; } }
 function toCache(key,val){ try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
 
+// Convertit "Ville (41)" en "Ville, Loir-et-Cher, France" (meilleur géocodage)
+const deptMap = {
+  "41": "Loir-et-Cher", "45": "Loiret", "37": "Indre-et-Loire", "72": "Sarthe"
+};
+function normalizeVilleDept(villeDept) {
+  if (!villeDept) return null;
+  const m = villeDept.match(/^(.+?)\s*\((\d{2})\)/);
+  if (m) {
+    const city = m[1].trim();
+    const code = m[2];
+    const dept = deptMap[code] || code;
+    return `${city}, ${dept}, France`;
+  }
+  return `${villeDept}, France`;
+}
+
 // Géocodage Nominatim (politesse/throttle)
 async function geocode(text) {
   if (!text) return null;
-  const q = `${text}, France`;
+  const q = text;
   const key = `geo:${q}`;
   const cached = fromCache(key);
   if (cached) return cached;
@@ -22,9 +38,7 @@ async function geocode(text) {
   const js = await resp.json();
   if (Array.isArray(js) && js.length) {
     const ll = [parseFloat(js[0].lat), parseFloat(js[0].lon)];
-    toCache(key, ll);
-    await sleep(900); // throttle
-    return ll;
+    toCache(key, ll); await sleep(900); return ll;
   }
   await sleep(900);
   console.warn('[Geocode] Aucune coordonnée pour', q);
@@ -38,7 +52,7 @@ function el(tag, attrs={}, html='') {
   return d;
 }
 
-// ---------- Main ----------
+// ===== Main =====
 (async () => {
   try {
     const [meta, categories, lieux, provsRaw] = await Promise.all([
@@ -48,27 +62,29 @@ function el(tag, attrs={}, html='') {
       loadJSON('data/provenances.json')
     ]);
 
-    // Carte
-    const map = L.map('map');
-    map.setView(meta.centre || [48.8566, 2.3522], meta.zoom || 6);
+    // Titre affiché tout en haut
+    document.getElementById('page-title').textContent = meta.titre || 'Carte';
 
+    // Carte
+    const map = L.map('map', { zoomControl: true });
+    // Déplace le zoom en bas à droite pour libérer le haut pour le titre
+    map.zoomControl.setPosition('bottomright');
+
+    map.setView(meta.centre || [48.8566, 2.3522], meta.zoom || 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: meta.source || '© OpenStreetMap'
     }).addTo(map);
 
-    // Groupes par catégorie (pour filtres)
-    const catIndex = {};
-    categories.forEach(c => { catIndex[c.id] = c; });
+    // Catégories
+    const catIndex = {}; categories.forEach(c => catIndex[c.id] = c);
+    const gByCat = {}; categories.forEach(c => gByCat[c.id] = L.featureGroup().addTo(map));
 
-    const gByCat = {};
-    categories.forEach(c => gByCat[c.id] = L.featureGroup().addTo(map));
-
-    // Provenances (participants / incertains / non)
+    // Provenances
     const gProv = { 'oui': L.featureGroup().addTo(map), 'incertain': L.featureGroup().addTo(map), 'non': L.featureGroup().addTo(map) };
     const etatToClass = { 'oui':'prov-oui', 'non':'prov-non', 'incertain':'prov-incertain' };
-    const etatToLib   = { 'oui':'Participant', 'non':'Non participant', 'incertain':'Incertain' };
+    const etatToLib   = { 'oui':'Disponible', 'non':'Ne vient pas', 'incertain':'Incertain' }; // libellé infobulle provenances
 
-    // Ajout provenances (sécurisé + fallback géocodage adresse si lat/lon manquants)
+    // Ajoute les provenances (sécurisé, fallback géocodage sur adresse)
     async function addProvenance(p) {
       const etat = (p.etat || 'oui').toLowerCase();
       const grp = gProv[etat] || gProv['oui'];
@@ -84,81 +100,98 @@ function el(tag, attrs={}, html='') {
       } else if (p.adresse) {
         ll = await geocode(p.adresse);
       }
-
       if (!ll) { console.warn('[Provenance ignorée]', p); return; }
 
       L.marker(ll, { icon }).addTo(grp)
-        .bindPopup(
-          `<strong>${p.id ? p.id+' – ' : ''}${p.nom || ''}</strong>` +
-          `<div>${p.adresse || ''}</div>` +
-          `<div style="margin-top:6px"><em>${etatToLib[etat] || ''}</em></div>`
-        );
+        .bindPopup(`<strong>${p.id ? p.id+' – ' : ''}${p.nom || ''}</strong><div>${p.adresse || ''}</div><div style="margin-top:6px"><em>${etatToLib[etat] || ''}</em></div>`);
     }
     for (const p of (provsRaw || [])) { await addProvenance(p); }
 
-    // Ajout lieux (géocodage : adresse prioritaire, sinon ville)
+    // Libellés “disponibilité / verdict” pour gîtes à partir de la catégorie (en attendant que l’Excel vXX alimente des champs dédiés)
+    const catToDispon = {
+      'indispo':'Indisponible',
+      'attente':'En attente de réponse',
+      'ideal':'Disponible',
+      'limite':'Disponible (à vérifier)',
+      'contraintes':'Disponible (avec contraintes)'
+    };
+    const catToVerdict = {
+      'indispo':'Indisponible',
+      'attente':'En attente',
+      'ideal':'Idéal',
+      'limite':'Limite à vérifier',
+      'contraintes':'Avec contraintes'
+    };
+
+    // Ajoute les gîtes (géocodage : adresse > ville(dept))
     async function addLieu(lieu) {
       const cat = catIndex[lieu.categorie] || { id:'autre', libelle:'Autre', couleur:'#2563EB' };
       if (!gByCat[cat.id]) gByCat[cat.id] = L.featureGroup().addTo(map);
 
       let ll = null;
       if (lieu.adresse) ll = await geocode(lieu.adresse);
-      if (!ll && lieu.ville_dept) ll = await geocode(lieu.ville_dept);
-
+      if (!ll && lieu.ville_dept) ll = await geocode(normalizeVilleDept(lieu.ville_dept));
       if (!ll) { console.warn('[Lieu ignoré]', lieu); return; }
 
+      // Icône avec numéro
       const icon = L.divIcon({
-        className:'mk',
-        html:`<span class="dot" style="background:${cat.couleur}"></span>`,
-        iconSize:[16,16], iconAnchor:[8,8], popupAnchor:[0,-8]
+        className:'mk-lieu',
+        html:`<span class="pin" style="background:${cat.couleur}">${(lieu.id||'')}</span>`,
+        iconSize:[24,24], iconAnchor:[12,12], popupAnchor:[0,-12]
       });
 
-      const nom = lieu.nom || 'Sans nom';
-      const placeLine = lieu.adresse ? lieu.adresse : (lieu.ville_dept || '');
-      const link = lieu.lien ? `<div style="margin-top:6px"><a href="${lieu.lien}" target="_blank" rel="noopener">Voir l’annonce</a></div>` : '';
-      const desc = lieu.description ? `<div>${lieu.description}</div>` : '';
+      // Contenu popup (structure demandée)
+      const nom = (lieu.nom || '').trim();
+      const titre = `<strong>n°${lieu.id} — ${nom}</strong>`;
+      const place = lieu.adresse ? lieu.adresse : (lieu.ville_dept || '');
+      const disponibilite = `<em>${catToDispon[lieu.categorie] || ''}</em>`;
+      const verdict = `<div><strong>Analyse :</strong> ${catToVerdict[lieu.categorie] || ''}</div>`;
+      const resume = lieu.description ? `<div style="margin-top:6px">${lieu.description}</div>` : '';
+      const tarif = lieu.tarif ? `<div style="margin-top:6px"><strong>Tarif :</strong> ${lieu.tarif}</div>` : '';
+      const lienAnnonce = lieu.lien ? `<a href="${lieu.lien}" target="_blank" rel="noopener">Voir l’annonce</a>` : '';
+      const lienSite = lieu.site ? ` &nbsp;|&nbsp; <a href="${lieu.site}" target="_blank" rel="noopener">Site du gîte</a>` : '';
+      const liens = (lienAnnonce || lienSite) ? `<div style="margin-top:6px">${lienAnnonce}${lienSite}</div>` : '';
 
-      L.marker(ll, { icon }).addTo(gByCat[cat.id])
-        .bindPopup(`<strong>${nom}</strong><div>${placeLine}</div>${desc}${link}`);
+      const html = [
+        titre,
+        `<div>${place}</div>`,
+        `<div style="margin-top:6px">${disponibilite}</div>`,
+        `<div style="margin-top:6px">${verdict}</div>`,
+        resume,
+        tarif,
+        liens
+      ].join('');
+
+      L.marker(ll, { icon }).addTo(gByCat[cat.id]).bindPopup(html);
     }
     for (const Lieu of (lieux || [])) { await addLieu(Lieu); }
 
-    // Ajustement de vue
+    // Ajustement vue
     const all = L.featureGroup([...Object.values(gByCat), ...Object.values(gProv)]).addTo(map);
     if (all.getLayers().length) map.fitBounds(all.getBounds().pad(0.2));
 
-    // Titre
-    if (meta.titre) {
-      const titleCtl = L.control({ position:'topleft' });
-      titleCtl.onAdd = function() {
-        const d = L.DomUtil.create('div','titlebar');
-        d.innerHTML = `<div class="title">${meta.titre}</div>`;
-        return d;
-      };
-      titleCtl.addTo(map);
-    }
-
-    // ---------- Panneau fusionné légende+filtres (repliable) ----------
+    // ===== Panneau fusionné (bas-gauche) =====
     const toolbar = document.getElementById('toolbar');
-    const btn = document.getElementById('toggleToolbar');
+    const tbBody  = document.getElementById('tbBody');
+    const tbBtn   = document.getElementById('tbToggle');
 
     // Contenu : Catégories
     const s1 = el('div',{class:'section'});
-    s1.append(el('span',{class:'ttl'},'Catégories'));
+    s1.append(el('div',{class:'ttl'},'Catégories'));
     const row1 = el('div',{class:'row'});
     categories.forEach(c=>{
       const id = `flt_cat_${c.id}`;
-      const label = el('label',{class:'label-chip'},
+      const lab = el('label',{class:'label-chip'},
         `<input type="checkbox" id="${id}" data-cat="${c.id}" checked>
          <span class="swatch" style="background:${c.couleur}"></span> ${c.libelle}`);
-      row1.append(label);
+      row1.append(lab);
     });
     s1.append(row1);
-    toolbar.append(s1);
+    tbBody.append(s1);
 
     // Contenu : Provenances
     const s2 = el('div',{class:'section'});
-    s2.append(el('span',{class:'ttl'},'Provenances'));
+    s2.append(el('div',{class:'ttl'},'Provenances'));
     const row2 = el('div',{class:'row'});
     [
       {k:'oui', txt:'Participants', cls:'prov-oui'},
@@ -166,39 +199,39 @@ function el(tag, attrs={}, html='') {
       {k:'non', txt:'Non participants', cls:'prov-non'}
     ].forEach(p=>{
       const id = `flt_prov_${p.k}`;
-      const label = el('label',{class:'label-chip'},
+      const lab = el('label',{class:'label-chip'},
         `<input type="checkbox" id="${id}" data-prov="${p.k}" checked>
-         <span class="swatch ${p.cls}" style="background:transparent;"></span> ${p.txt}`);
-      row2.append(label);
+         <span class="swatch ${p.cls}"></span> ${p.txt}`);
+      row2.append(lab);
     });
     s2.append(row2);
-    toolbar.append(s2);
+    tbBody.append(s2);
 
+    // Filtres comportement
     function applyFilters() {
-      // Catégories
       categories.forEach(c=>{
-        const cb = toolbar.querySelector(`input[data-cat="${c.id}"]`);
+        const cb = tbBody.querySelector(`input[data-cat="${c.id}"]`);
         if (!cb) return;
         if (cb.checked) map.addLayer(gByCat[c.id]); else map.removeLayer(gByCat[c.id]);
       });
-      // Provenances
       Object.keys(gProv).forEach(k=>{
-        const cb = toolbar.querySelector(`input[data-prov="${k}"]`);
+        const cb = tbBody.querySelector(`input[data-prov="${k}"]`);
         if (!cb) return;
         if (cb.checked) map.addLayer(gProv[k]); else map.removeLayer(gProv[k]);
       });
     }
-    toolbar.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', applyFilters));
+    tbBody.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', applyFilters));
     applyFilters();
 
-    // Bouton toggle (mobile)
-    function setExpanded(expanded){
-      btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-      toolbar.classList.toggle('hidden', !expanded && window.matchMedia('(max-width: 767px)').matches);
+    // Toggle (▾ / −)
+    function setCollapsed(collapsed){
+      toolbar.classList.toggle('collapsed', collapsed);
+      tbBtn.setAttribute('aria-expanded', (!collapsed).toString());
+      tbBtn.textContent = collapsed ? '▾' : '−';
     }
-    btn.addEventListener('click', ()=> setExpanded(btn.getAttribute('aria-expanded') !== 'true'));
-    // Par défaut : masqué en mobile, visible en desktop (cf. CSS)
-    setExpanded(false);
+    tbBtn.addEventListener('click', ()=> setCollapsed(!toolbar.classList.contains('collapsed')));
+    // Par défaut : replié (surtout pour mobile)
+    setCollapsed(true);
 
   } catch (e) {
     console.error(e);
