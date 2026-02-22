@@ -1,10 +1,191 @@
 [
   {
     "id": 1,
-    "nom": "Paris – point de test",
-    "latitude": 48.8566,
-    "longitude": 2.3522,
-    "description": "Premier point issu d’un fichier de données",
-    "categorie": "test"
+    "nom": "La Cave Margot – piscine & spa",
+    "ville_dept": "Lunay (41)",
+    "adresse": "",
+    "lien": "https://www.gitedegroupe.fr/gite-groupe-LE-fdea.html",
+    "categorie": "ideal",
+    "description": "Espace commun 100 m² (cuisine équipée, salle repas 30 couverts, salon/sono/danse), terrasses, jardin paysagé ; sauna, jacuzzi (toute l’année), piscine (mai–sept.), BBQ, grand brasero, baby-foot, ping-pong, pétanque, trampoline, volley/badminton, jeux de lumières, TV XXL, wifi fibre \nIdéal"
+  },
+  {
+    "id": 2,
+    "nom": "Ferme de la Hubardière",
+    "ville_dept": "Vallières-les-Grandes (41)",
+    "adresse": "",
+    "lien": "https://www.gitedegroupe.fr/gite-groupe-Le-6732.html",
+    "categorie": "limite",
+    "description": "Salle réception 120 m² (enceintes), babyfoot, ping-pong, étang"
+  },
+  {
+    "id": 3,
+    "nom": "Domaine du Grand Nouer",
+    "ville_dept": "Pierrefitte-sur-Sauldre (41)",
+    "adresse": "",
+    "lien": "https://www.gitedegroupe.fr/gite-groupe-Pc-1c1e.html",
+    "categorie": "indispo",
+    "description": "Salle 105 m² cheminée, grange 80 couverts, volley/badminton, barque \nIndisponible (réponse loueur = Non)"
+  },
+  {
+    "id": 4,
+    "nom": "Pavillon Hortense",
+    "ville_dept": "Concriers (41)",
+    "adresse": "",
+    "lien": "https://www.gitedegroupe.fr/gite-groupe-Di-30b6.html",
+    "categorie": "limite",
+    "description": "Grande salle + salon cheminée, jardin 3000 m², BBQ, clim (grande maison)"
+  },
+  {
+    "id": 5,
+    "nom": "Domaine Les Poultières (Château Le Chéreau) – Domaine des Poultières",
+    "ville_dept": "Montrieux-en-Sologne (41)",
+    "adresse": "",
+    "lien": "https://www.gitedegroupe.fr/gite-groupe-Al-3aa8.html",
+    "categorie": "ideal",
+    "description": "Gîte « Le Chêne » (4 chambres) + espaces communs ; préau éclairé, plancha, ping-pong, pétanque; tennis/piscine du château sur autorisation"
+  },
+  {
+    "id": 6,
+    "nom": "Domaine de la Chambaudière",
+    "ville_dept": "Valencisse (41)",
+    "adresse": "",
+    "lien": "https://www.gitedegroupe.fr/gite-groupe-JO-0ca1.html",
+    "categorie": "indispo",
+    "description": "Piscine chauffée (mi-mai→mi-sept.), BBQ/brasero, baby-foot, salle séminaire (option) \nIndisponible (réponse loueur = Non)"
+  },
+  {
+    "id": 7,
+    "nom": "La Maison des Songes",
+    "ville_dept": "Chauvigny-du-Perche (41)",
+    "adresse": "",
+    "lien": "https://www.giga-location.com/gite-de-groupe/CENTRE/Loir-et-Cher/1635/La-Maison-des-Songes.html",
+    "categorie": "limite",
+    "description": "Maison principale 15 + dépendance 5–6 (option) ; grand terrain 35 000 m² ; options sauna & jacuzzi (2026)"
+  },
+  {
+    "id": 8,
+    "nom": "La Lézardière (grand + petit gîte)",
+    "ville_dept": "Blois (41)",
+    "adresse": "",
+    "lien": "https://www.grandsgites.com/gite-41-la-lezardiere-5870.htm",
+    "categorie": "indispo",
+    "description": "Piscine partagée (été), vue Loire, labels handicap; site calme (pas de fête) \nIndisponible (réponse loueur = Non)"
+  },
+  {
+    "id": 9,
+    "nom": "Le Moulin de Crouy",
+    "ville_dept": "Crouy-sur-Cosson (41)",
+    "adresse": "",
+    "lien": "https://www.grandsgites.com/gite-41-moulin-crouy-1449.htm",
+    "categorie": "contraintes",
+    "description": "Piscine, tennis, salle de jeux, parc 14 ha, 4 km Chambord"
+  },
+  {
+    "id": 10,
+    "nom": "Les grands gîtes des Chateliers – Les Chateliers",
+    "ville_dept": "Suèvres (41)",
+    "adresse": "",
+    "lien": "https://www.grandsgites.com/gite-41-des-chateliers-7403.htm",
+    "categorie": "attente",
+    "description": "2 maisons (8 ch./6 sde) + annexes ; 2 salles (20 & 24 couverts), grand terrain \nEn attente"
+  },
+  {
+    "id": 11,
+    "nom": "Le Verger de Pauline",
+    "ville_dept": "Maslives (41)",
+    "adresse": "",
+    "lien": "https://www.grandsgites.com/gite-41-verger-pauline-3964.htm",
+    "categorie": "contraintes",
+    "description": "2 maisons – 7 ch., 4 sde ; cheminées, clim, 2 grandes pièces 40–50 m²"
+  },
+  {
+    "id": 12,
+    "nom": "Gîte de la Rebardière",
+    "ville_dept": "Thésée (41)",
+    "adresse": "",
+    "lien": "https://www.grandsgites.com/gite-41-rebardiere-1635.htm",
+    "categorie": "contraintes",
+    "description": "Longère 27 m – 2 gîtes (14 + 6) – 6 ch., 3 sde ; ping-pong, baby-foot, pétanque"
+  },
+  {
+    "id": 13,
+    "nom": "Le Grand Chêne",
+    "ville_dept": "Neung-sur-Beuvron (41)",
+    "adresse": "",
+    "lien": "https://www.grandsgites.com/gite-41-grand-chene-3487.htm",
+    "categorie": "indispo",
+    "description": "Domaine 3 ha, étang 1 ha (pêche), grande pièce de vie \nIndisponible (réponse loueur = Non)"
+  },
+  {
+    "id": 14,
+    "nom": "Montperthuis",
+    "ville_dept": "Chaumont-sur-Tharonne (41)",
+    "adresse": "3231 route de Napoléon III, 41600 Chaumont-sur-Tharonne",
+    "lien": "https://www.grandsgites.com/gite-41-montperthuis-2425.htm",
+    "categorie": "ideal",
+    "description": "Séjour cathédrale 100 m² + véranda 60 m², piscine chauffée, billard \nIdéal"
+  },
+  {
+    "id": 15,
+    "nom": "Domaine de la Patrisière – Le Pont du Bonheur (Gîtes de France)",
+    "ville_dept": "Saint-Arnoult (41)",
+    "adresse": "",
+    "lien": "https://www.gites-de-france.com/fr/centre-val-de-loire/loir-et-cher/domaine-de-la-patrisiere-le-pont-du-bonheur-41g1434",
+    "categorie": "limite",
+    "description": "5 ch., salle de jeux billard ; jardin avec plan d’eau ; tout compris"
+  },
+  {
+    "id": 16,
+    "nom": "Gîte de la Madeleine",
+    "ville_dept": "La Madeleine-Villefrouin (41)",
+    "adresse": "",
+    "lien": "https://www.gite-lamadeleine.com/gite-de-la-madeleine---accueil.html",
+    "categorie": "contraintes",
+    "description": "Piscine chauffée 4×9 m, salle de jeux 40 m², deux espaces vie >100 m²"
+  },
+  {
+    "id": 17,
+    "nom": "Maison chaleureuse au cœur du Perche Sarthois – Bessé",
+    "ville_dept": "Bessé-sur-Braye (72)",
+    "adresse": "",
+    "lien": "https://fr.airbnb.ch/rooms/720114283575728375",
+    "categorie": "contraintes",
+    "description": "Piscine chauffée (15/04→15/10), boulodrome, baby-foot, ping-pong, BBQ/plancha, parc 2 ha"
+  },
+  {
+    "id": 18,
+    "nom": "Loire Station (ancienne gare de Vouvray)",
+    "ville_dept": "Vouvray (37)",
+    "adresse": "",
+    "lien": "https://loire-station.fr/",
+    "categorie": "contraintes",
+    "description": "Grande salle festive 30 couverts, baby-foot ; terrasse ; piscine hors-sol (mai→sept)"
+  },
+  {
+    "id": 19,
+    "nom": "Gîte du Petit Beaumont (Abritel) – Chémery – Le Petit Beaumont",
+    "ville_dept": "Chémery (41)",
+    "adresse": "",
+    "lien": "https://www.abritel.fr/location-vacances/p2091348",
+    "categorie": "contraintes",
+    "description": "Piscine couverte chauffée (mai→sept), billard, baby-foot, ping-pong"
+  },
+  {
+    "id": 20,
+    "nom": "Manoir avec parc de 1 hectare (Abritel) – Saint-Avertin",
+    "ville_dept": "Saint-Avertin (37)",
+    "adresse": "",
+    "lien": "https://www.abritel.fr/location-vacances/p6654449a",
+    "categorie": "limite",
+    "description": "Grand parc arboré, bibliothèque 5000+ livres, terrasse, BBQ"
+  },
+  {
+    "id": 21,
+    "nom": "Le Domaine de Baracas 4* – Le Grand et le Petit Gîte – Huisseau-sur-Mauves",
+    "ville_dept": "Huisseau-sur-Mauves (45)",
+    "adresse": "",
+    "lien": "https://www.airbnb.fr/rooms/829600062298590245",
+    "categorie": "contraintes",
+    "description": "Piscine (mai→sept, chauffée selon météo), SPA, salle de jeux (billard/baby-foot), pétanque, BBQ"
   }
 ]
