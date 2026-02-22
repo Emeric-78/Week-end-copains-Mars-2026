@@ -10,46 +10,37 @@ const isFiniteNum = v => Number.isFinite(parseFloat(v));
 function fromCache(key){ try { return JSON.parse(localStorage.getItem(key)||'null'); } catch { return null; } }
 function toCache(key,val){ try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
 
-// Convertit "Ville (41)" en "Ville, Loir-et-Cher, France" (meilleur géocodage)
-const deptMap = {
-  "41": "Loir-et-Cher", "45": "Loiret", "37": "Indre-et-Loire", "72": "Sarthe"
-};
+// Convertit "Ville (41)" -> "Ville, Loir-et-Cher, France" (meilleur géocodage)
+const deptMap = { "41":"Loir-et-Cher","45":"Loiret","37":"Indre-et-Loire","72":"Sarthe" };
 function normalizeVilleDept(villeDept) {
   if (!villeDept) return null;
   const m = villeDept.match(/^(.+?)\s*\((\d{2})\)/);
-  if (m) {
-    const city = m[1].trim();
-    const code = m[2];
-    const dept = deptMap[code] || code;
-    return `${city}, ${dept}, France`;
-  }
+  if (m) { const city = m[1].trim(); const code = m[2]; const dept = deptMap[code] || code; return `${city}, ${dept}, France`; }
   return `${villeDept}, France`;
 }
 
 // Géocodage Nominatim (politesse/throttle)
 async function geocode(text) {
   if (!text) return null;
-  const q = text;
-  const key = `geo:${q}`;
+  const key = `geo:${text}`;
   const cached = fromCache(key);
   if (cached) return cached;
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=fr&q=${encodeURIComponent(q)}`;
-  const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=fr&q=${encodeURIComponent(text)}`;
+  const resp = await fetch(url, { headers: { 'Accept':'application/json' } });
   const js = await resp.json();
   if (Array.isArray(js) && js.length) {
     const ll = [parseFloat(js[0].lat), parseFloat(js[0].lon)];
     toCache(key, ll); await sleep(900); return ll;
   }
   await sleep(900);
-  console.warn('[Geocode] Aucune coordonnée pour', q);
+  console.warn('[Geocode] Aucune coordonnée pour', text);
   return null;
 }
 
 function el(tag, attrs={}, html='') {
   const d = document.createElement(tag);
   Object.entries(attrs).forEach(([k,v]) => d.setAttribute(k,v));
-  if (html) d.innerHTML = html;
-  return d;
+  if (html) d.innerHTML = html; return d;
 }
 
 // ===== Main =====
@@ -62,15 +53,14 @@ function el(tag, attrs={}, html='') {
       loadJSON('data/provenances.json')
     ]);
 
-    // Titre affiché tout en haut
+    // Titre
     document.getElementById('page-title').textContent = meta.titre || 'Carte';
 
     // Carte
     const map = L.map('map', { zoomControl: true });
-    // Déplace le zoom en bas à droite pour libérer le haut pour le titre
-    map.zoomControl.setPosition('bottomright');
-
+    map.zoomControl.setPosition('bottomright'); // libère le haut pour le titre
     map.setView(meta.centre || [48.8566, 2.3522], meta.zoom || 6);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: meta.source || '© OpenStreetMap'
     }).addTo(map);
@@ -82,9 +72,9 @@ function el(tag, attrs={}, html='') {
     // Provenances
     const gProv = { 'oui': L.featureGroup().addTo(map), 'incertain': L.featureGroup().addTo(map), 'non': L.featureGroup().addTo(map) };
     const etatToClass = { 'oui':'prov-oui', 'non':'prov-non', 'incertain':'prov-incertain' };
-    const etatToLib   = { 'oui':'Disponible', 'non':'Ne vient pas', 'incertain':'Incertain' }; // libellé infobulle provenances
+    const etatToLib   = { 'oui':'Participant', 'non':'Non participant', 'incertain':'Incertain' };
 
-    // Ajoute les provenances (sécurisé, fallback géocodage sur adresse)
+    // Ajout provenances (sécurisé, fallback géocodage sur adresse)
     async function addProvenance(p) {
       const etat = (p.etat || 'oui').toLowerCase();
       const grp = gProv[etat] || gProv['oui'];
@@ -95,19 +85,16 @@ function el(tag, attrs={}, html='') {
       });
 
       let ll = null;
-      if (isFiniteNum(p.lat) && isFiniteNum(p.lon)) {
-        ll = [parseFloat(p.lat), parseFloat(p.lon)];
-      } else if (p.adresse) {
-        ll = await geocode(p.adresse);
-      }
-      if (!ll) { console.warn('[Provenance ignorée]', p); return; }
+      if (isFiniteNum(p.lat) && isFiniteNum(p.lon)) ll = [parseFloat(p.lat), parseFloat(p.lon)];
+      else if (p.adresse) ll = await geocode(p.adresse);
 
+      if (!ll) { console.warn('[Provenance ignorée]', p); return; }
       L.marker(ll, { icon }).addTo(grp)
-        .bindPopup(`<strong>${p.id ? p.id+' – ' : ''}${p.nom || ''}</strong><div>${p.adresse || ''}</div><div style="margin-top:6px"><em>${etatToLib[etat] || ''}</em></div>`);
+       .bindPopup(`<strong>${p.id ? p.id+' – ' : ''}${p.nom || ''}</strong><div>${p.adresse || ''}</div><div style="margin-top:6px"><em>${etatToLib[etat] || ''}</em></div>`);
     }
     for (const p of (provsRaw || [])) { await addProvenance(p); }
 
-    // Libellés “disponibilité / verdict” pour gîtes à partir de la catégorie (en attendant que l’Excel vXX alimente des champs dédiés)
+    // Libellés disponibilité/verdict selon catégorie (en attendant les champs dédiés depuis Excel)
     const catToDispon = {
       'indispo':'Indisponible',
       'attente':'En attente de réponse',
@@ -123,7 +110,7 @@ function el(tag, attrs={}, html='') {
       'contraintes':'Avec contraintes'
     };
 
-    // Ajoute les gîtes (géocodage : adresse > ville(dept))
+    // Ajout gîtes (géocodage : adresse > ville(dept))
     async function addLieu(lieu) {
       const cat = catIndex[lieu.categorie] || { id:'autre', libelle:'Autre', couleur:'#2563EB' };
       if (!gByCat[cat.id]) gByCat[cat.id] = L.featureGroup().addTo(map);
@@ -133,14 +120,12 @@ function el(tag, attrs={}, html='') {
       if (!ll && lieu.ville_dept) ll = await geocode(normalizeVilleDept(lieu.ville_dept));
       if (!ll) { console.warn('[Lieu ignoré]', lieu); return; }
 
-      // Icône avec numéro
       const icon = L.divIcon({
         className:'mk-lieu',
         html:`<span class="pin" style="background:${cat.couleur}">${(lieu.id||'')}</span>`,
         iconSize:[24,24], iconAnchor:[12,12], popupAnchor:[0,-12]
       });
 
-      // Contenu popup (structure demandée)
       const nom = (lieu.nom || '').trim();
       const titre = `<strong>n°${lieu.id} — ${nom}</strong>`;
       const place = lieu.adresse ? lieu.adresse : (lieu.ville_dept || '');
@@ -166,7 +151,7 @@ function el(tag, attrs={}, html='') {
     }
     for (const Lieu of (lieux || [])) { await addLieu(Lieu); }
 
-    // Ajustement vue
+    // Ajustement vue global
     const all = L.featureGroup([...Object.values(gByCat), ...Object.values(gProv)]).addTo(map);
     if (all.getLayers().length) map.fitBounds(all.getBounds().pad(0.2));
 
@@ -207,7 +192,7 @@ function el(tag, attrs={}, html='') {
     s2.append(row2);
     tbBody.append(s2);
 
-    // Filtres comportement
+    // Filtres
     function applyFilters() {
       categories.forEach(c=>{
         const cb = tbBody.querySelector(`input[data-cat="${c.id}"]`);
@@ -230,8 +215,7 @@ function el(tag, attrs={}, html='') {
       tbBtn.textContent = collapsed ? '▾' : '−';
     }
     tbBtn.addEventListener('click', ()=> setCollapsed(!toolbar.classList.contains('collapsed')));
-    // Par défaut : replié (surtout pour mobile)
-    setCollapsed(true);
+    setCollapsed(true); // par défaut : replié
 
   } catch (e) {
     console.error(e);
