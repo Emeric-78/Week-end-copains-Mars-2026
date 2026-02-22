@@ -1,4 +1,4 @@
-// Charge un JSON (helper)
+// Helper pour charger un JSON
 async function loadJSON(url) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Erreur de chargement: ${url}`);
@@ -7,14 +7,15 @@ async function loadJSON(url) {
 
 (async () => {
   try {
-    // Charge meta + catégories + lieux
-    const [meta, categories, lieux] = await Promise.all([
+    // Charge les jeux de données
+    const [meta, categories, lieux, provs] = await Promise.all([
       loadJSON('data/meta.json'),
       loadJSON('data/categories.json'),
-      loadJSON('data/lieux.json')
+      loadJSON('data/lieux.json'),
+      loadJSON('data/provenances.json')
     ]);
 
-    // Création de la carte
+    // Carte
     const map = L.map('map');
     map.setView(meta.centre || [48.8566, 2.3522], meta.zoom || 6);
 
@@ -23,11 +24,11 @@ async function loadJSON(url) {
       attribution: meta.source || '© OpenStreetMap'
     }).addTo(map);
 
-    // Index catégories → couleur
+    // Index catégories
     const catIndex = {};
     categories.forEach(c => { catIndex[c.id] = c; });
 
-    // Légende simple
+    // Légende
     const legend = L.control({ position: 'bottomleft' });
     legend.onAdd = function () {
       const div = L.DomUtil.create('div', 'legend');
@@ -39,22 +40,16 @@ async function loadJSON(url) {
     };
     legend.addTo(map);
 
-    // Ajoute les lieux
-    const group = L.featureGroup().addTo(map);
-
+    // Couche lieux
+    const gLieux = L.featureGroup().addTo(map);
     lieux.forEach(lieu => {
       const cat = catIndex[lieu.categorie] || { couleur: '#2563EB', libelle: lieu.categorie || 'Autre' };
-
-      // Marqueur style "pastille colorée"
       const icon = L.divIcon({
         className: 'mk',
         html: `<span class="dot" style="background:${cat.couleur}"></span>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
-        popupAnchor: [0, -8]
+        iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -8]
       });
-
-      const m = L.marker([lieu.latitude, lieu.longitude], { icon }).addTo(group);
+      const m = L.marker([lieu.latitude, lieu.longitude], { icon }).addTo(gLieux);
       const nom = lieu.nom || 'Sans nom';
       const desc = lieu.description || '';
       const catLib = cat.libelle;
@@ -62,12 +57,29 @@ async function loadJSON(url) {
       m.bindPopup(`<strong>${nom}</strong><div>${desc}</div><div style="margin-top:6px"><em>${catLib}</em></div>${extra}`);
     });
 
-    // Ajuste la vue si des points existent
-    if (group.getLayers().length > 0) {
-      map.fitBounds(group.getBounds().pad(0.2));
+    // Couches provenances : participants (on) / non participants (off)
+    const gProvOn  = L.featureGroup().addTo(map);
+    const gProvOff = L.featureGroup().addTo(map);
+
+    provs.forEach(p => {
+      const cls = p.actif ? 'on' : 'off';
+      const grp = p.actif ? gProvOn : gProvOff;
+      const icon = L.divIcon({
+        className: `mk-prov ${cls}`,
+        html: `<span class="dot"></span>`,
+        iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -8]
+      });
+      const m = L.marker([p.lat, p.lon], { icon }).addTo(grp);
+      m.bindPopup(`<strong>${p.id} – ${p.nom}</strong><div>${p.adresse || ''}</div><div style="margin-top:6px"><em>${p.actif ? 'Participant' : 'Non participant'}</em></div>`);
+    });
+
+    // Ajuste la vue si nécessaire
+    const all = L.featureGroup([gLieux, gProvOn, gProvOff]).addTo(map);
+    if (all.getLayers().length > 0) {
+      map.fitBounds(all.getBounds().pad(0.2));
     }
 
-    // Titre optionnel
+    // Titre
     if (meta.titre) {
       const titleCtl = L.control({ position: 'topleft' });
       titleCtl.onAdd = function () {
@@ -77,6 +89,18 @@ async function loadJSON(url) {
       };
       titleCtl.addTo(map);
     }
+
+    // Filtres
+    const cbOn  = document.getElementById('f_prov_on');
+    const cbOff = document.getElementById('f_prov_off');
+
+    function applyFilters() {
+      if (cbOn.checked) { map.addLayer(gProvOn); } else { map.removeLayer(gProvOn); }
+      if (cbOff.checked) { map.addLayer(gProvOff); } else { map.removeLayer(gProvOff); }
+    }
+    cbOn.addEventListener('change', applyFilters);
+    cbOff.addEventListener('change', applyFilters);
+    applyFilters(); // init
 
   } catch (e) {
     console.error(e);
