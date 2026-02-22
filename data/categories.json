@@ -1,27 +1,7 @@
 [
-  {
-    "id": "ideal",
-    "libelle": "Idéal",
-    "couleur": "#10B981"
-  },
-  {
-    "id": "contraintes",
-    "libelle": "Avec contraintes",
-    "couleur": "#2563EB"
-  },
-  {
-    "id": "limite",
-    "libelle": "Limite à vérifier",
-    "couleur": "#FACC15"
-  },
-  {
-    "id": "indispo",
-    "libelle": "Indisponible",
-    "couleur": "#EF4444"
-  },
-  {
-    "id": "attente",
-    "libelle": "Non répondu / En attente",
-    "couleur": "#9CA3AF"
-  }
+  { "id": "ideal",       "libelle": "Idéal",                 "couleur": "#10B981" },
+  { "id": "contraintes", "libelle": "Avec contraintes",      "couleur": "#2563EB" },
+  { "id": "limite",      "libelle": "Limite à vérifier",     "couleur": "#FACC15" },
+  { "id": "indispo",     "libelle": "Indisponible",          "couleur": "#EF4444" },
+  { "id": "attente",     "libelle": "Non répondu / En attente", "couleur": "#9CA3AF" }
 ]
