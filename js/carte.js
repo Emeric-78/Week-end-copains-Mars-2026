@@ -4,6 +4,33 @@ async function loadJSON(url) {
   if (!r.ok) throw new Error(`Erreur de chargement: ${url}`);
   return await r.json();
 }
+const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+function fromCache(key) {
+  try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; }
+}
+function toCache(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+// Géocodage Nominatim (politesse : 1 requête ~/s, cache local)
+async function geocode(text) {
+  const q = `${text}, France`;
+  const key = `geo:${q}`;
+  const cached = fromCache(key);
+  if (cached) return cached;
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=fr&q=${encodeURIComponent(q)}`;
+  const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  const js = await resp.json();
+  if (Array.isArray(js) && js.length) {
+    const ll = [parseFloat(js[0].lat), parseFloat(js[0].lon)];
+    toCache(key, ll);
+    await sleep(900); // throttle
+    return ll;
+  }
+  await sleep(900);
+  return null;
+}
 
 function el(tag, attrs={}, html='') {
   const d = document.createElement(tag);
@@ -14,7 +41,6 @@ function el(tag, attrs={}, html='') {
 
 (async () => {
   try {
-    // Charge données
     const [meta, categories, lieux, provs] = await Promise.all([
       loadJSON('data/meta.json'),
       loadJSON('data/categories.json'),
@@ -30,10 +56,8 @@ function el(tag, attrs={}, html='') {
       attribution: meta.source || '© OpenStreetMap'
     }).addTo(map);
 
-    // === légende catégories (couleurs) ===
-    const catIndex = {};
-    categories.forEach(c => { catIndex[c.id] = c; });
-
+    // === légende catégories ===
+    const catIndex = {}; categories.forEach(c => catIndex[c.id] = c);
     const legend = L.control({ position:'bottomleft' });
     legend.onAdd = function() {
       const div = L.DomUtil.create('div', 'legend');
@@ -43,14 +67,45 @@ function el(tag, attrs={}, html='') {
     };
     legend.addTo(map);
 
-    // === groupes par catégorie (pour filtrage) ===
-    const gByCat = {};
-    categories.forEach(c => gByCat[c.id] = L.featureGroup().addTo(map));
+    // === groupes lieux par catégorie (pour filtres) ===
+    const gByCat = {}; categories.forEach(c => gByCat[c.id] = L.featureGroup().addTo(map));
 
-    // === lieux (gîtes) ===
-    lieux.forEach(lieu => {
-      const cat = catIndex[lieu.categorie] || { couleur:'#2563EB', libelle: lieu.categorie || 'Autre', id:'autre' };
+    // === provenances ===
+    const gProv = { 'oui': L.featureGroup().addTo(map), 'non': L.featureGroup().addTo(map), 'incertain': L.featureGroup().addTo(map) };
+    const etatToClass = { 'oui':'prov-oui', 'non':'prov-non', 'incertain':'prov-incertain' };
+    const etatToLib   = { 'oui':'Participant', 'non':'Non participant', 'incertain':'Incertain' };
+
+    // Pastille P1/P2/... pour provenances
+    (provs || []).forEach(p => {
+      const etat = (p.etat || 'oui').toLowerCase();
+      const icon = L.divIcon({
+        className: 'mk-provenance',
+        html: `<span class="icon-badge ${etatToClass[etat] || 'prov-oui'}">${(p.id||'').toUpperCase()}</span>`,
+        iconSize: [26,26], iconAnchor:[13,13], popupAnchor:[0,-12]
+      });
+      L.marker([p.lat, p.lon], { icon })
+       .addTo(gProv[etat] || gProv['oui'])
+       .bindPopup(
+         `<strong>${p.id ? p.id+' – ' : ''}${p.nom || ''}</strong>` +
+         `<div>${p.adresse || ''}</div>` +
+         `<div style="margin-top:6px"><em>${etatToLib[etat] || ''}</em></div>`
+       );
+    });
+
+    // === lieux (avec géocodage si nécessaire) ===
+    async function placeLieu(lieu) {
+      const cat = catIndex[lieu.categorie] || { id:'autre', libelle:'Autre', couleur:'#2563EB' };
       if (!gByCat[cat.id]) gByCat[cat.id] = L.featureGroup().addTo(map);
+
+      // Coordonnées si déjà présentes… (pas le cas ici)
+      let ll = null;
+
+      // Priorité 1 : adresse complète
+      if (!ll && lieu.adresse) ll = await geocode(lieu.adresse);
+      // Priorité 2 : ville (41) → on géocode "ville (41), France"
+      if (!ll && lieu.ville_dept) ll = await geocode(lieu.ville_dept);
+
+      if (!ll) return; // si rien trouvé, on ignore
 
       const icon = L.divIcon({
         className: 'mk',
@@ -58,48 +113,23 @@ function el(tag, attrs={}, html='') {
         iconSize: [16,16], iconAnchor:[8,8], popupAnchor:[0,-8]
       });
 
-      const m = L.marker([lieu.latitude, lieu.longitude], { icon }).addTo(gByCat[cat.id]);
       const nom = lieu.nom || 'Sans nom';
-      const desc = lieu.description || '';
-      const catLib = cat.libelle || 'Catégorie';
-      const extra = (lieu.lien ? `<div style="margin-top:6px"><a href="${lieu.lien}" target="_blank" rel="noopener">Ouvrir le lien</a></div>` : '');
-      m.bindPopup(`<strong>${nom}</strong><div>${desc}</div><div style="margin-top:6px"><em>${catLib}</em></div>${extra}`);
-    });
+      const placeLine = lieu.adresse ? lieu.adresse : lieu.ville_dept;
+      const link = lieu.lien ? `<div style="margin-top:6px"><a href="${lieu.lien}" target="_blank" rel="noopener">Voir l’annonce</a></div>` : '';
+      const desc = lieu.description ? `<div>${lieu.description}</div>` : '';
 
-    // === provenances ===
-    const gProv = {
-      'oui': L.featureGroup().addTo(map),
-      'non': L.featureGroup().addTo(map),
-      'incertain': L.featureGroup().addTo(map)
-    };
+      L.marker(ll, { icon })
+        .addTo(gByCat[cat.id])
+        .bindPopup(`<strong>${nom}</strong><div>${placeLine || ''}</div>${desc}${link}`);
+    }
 
-    const etatToClass = { 'oui':'prov-oui', 'non':'prov-non', 'incertain':'prov-incertain' };
-    const etatToLib   = { 'oui':'Participant', 'non':'Non participant', 'incertain':'Incertain' };
+    for (const Lieu of lieux) { await placeLieu(Lieu); }
 
-    provs.forEach(p => {
-      const etat = (p.etat || 'oui').toLowerCase();
-      const cls  = etatToClass[etat] || 'prov-oui';
-      const grp  = gProv[etat] || gProv['oui'];
+    // Ajustement de vue global
+    const all = L.featureGroup([...Object.values(gByCat), ...Object.values(gProv)]).addTo(map);
+    if (all.getLayers().length) map.fitBounds(all.getBounds().pad(0.2));
 
-      const icon = L.divIcon({
-        className: 'mk-provenance',
-        html: `<span class="icon-badge ${cls}">${(p.id||'').toUpperCase()}</span>`,
-        iconSize: [26,26], iconAnchor:[13,13], popupAnchor:[0,-12]
-      });
-
-      const m = L.marker([p.lat, p.lon], { icon }).addTo(grp);
-      m.bindPopup(
-        `<strong>${p.id ? p.id+' – ' : ''}${p.nom || ''}</strong>` +
-        `<div>${p.adresse || ''}</div>` +
-        `<div style="margin-top:6px"><em>${etatToLib[etat] || ''}</em></div>`
-      );
-    });
-
-    // === ajustement de vue ===
-    const allLayers = L.featureGroup([...Object.values(gByCat), ...Object.values(gProv)]).addTo(map);
-    if (allLayers.getLayers().length) map.fitBounds(allLayers.getBounds().pad(0.2));
-
-    // === titre ===
+    // Titre
     if (meta.titre) {
       const titleCtl = L.control({ position:'topleft' });
       titleCtl.onAdd = function() {
@@ -110,61 +140,38 @@ function el(tag, attrs={}, html='') {
       titleCtl.addTo(map);
     }
 
-    // === panneau de filtres (catégories + provenances) ===
+    // === Panneau de filtres (catégories + provenances) ===
     const toolbar = document.getElementById('toolbar');
-
-    // bloc catégories
-    const blockCat = el('div', {class:'block'});
-    blockCat.append(el('span', {class:'ttl'}, 'Catégories : '));
-    categories.forEach(c => {
-      const id = `flt_cat_${c.id}`;
-      const lab = el('label', {}, `<input type="checkbox" id="${id}" data-cat="${c.id}" checked> ${c.libelle}`);
-      blockCat.append(lab);
-    });
-
-    // bloc provenances
-    const blockProv = el('div', {class:'block'});
-    blockProv.append(el('span', {class:'ttl'}, 'Provenances : '));
-    const provDefs = [
-      {k:'oui', txt:'Participants'},
-      {k:'incertain', txt:'Incertains'},
-      {k:'non', txt:'Non participants'}
-    ];
-    provDefs.forEach(p => {
-      const id = `flt_prov_${p.k}`;
-      const lab = el('label', {}, `<input type="checkbox" id="${id}" data-prov="${p.k}" checked> ${p.txt}`);
-      blockProv.append(lab);
-    });
-
-    // assemble
+    toolbar.innerHTML = '';
     toolbar.append(el('div', {class:'block'}, '<strong>Filtres :</strong>'));
+
+    const blockCat = el('div', {class:'block'}); blockCat.append(el('span', {class:'ttl'}, 'Catégories : '));
+    categories.forEach(c => blockCat.append(el('label', {}, `<input type="checkbox" data-cat="${c.id}" checked> ${c.libelle}`)));
     toolbar.append(blockCat);
+
+    const blockProv = el('div', {class:'block'}); blockProv.append(el('span', {class:'ttl'}, 'Provenances : '));
+    [{k:'oui',txt:'Participants'}, {k:'incertain',txt:'Incertains'}, {k:'non',txt:'Non participants'}]
+      .forEach(p => blockProv.append(el('label', {}, `<input type="checkbox" data-prov="${p.k}" checked> ${p.txt}`)));
     toolbar.append(blockProv);
 
-    // comportements
     function applyFilters() {
-      // catégories
       categories.forEach(c => {
-        const cb = document.querySelector(`input[data-cat="${c.id}"]`);
+        const cb = toolbar.querySelector(`input[data-cat="${c.id}"]`);
         if (!cb) return;
         if (cb.checked) { map.addLayer(gByCat[c.id]); } else { map.removeLayer(gByCat[c.id]); }
       });
-      // provenances
       Object.keys(gProv).forEach(k => {
-        const cb = document.querySelector(`input[data-prov="${k}"]`);
+        const cb = toolbar.querySelector(`input[data-prov="${k}"]`);
         if (!cb) return;
         if (cb.checked) { map.addLayer(gProv[k]); } else { map.removeLayer(gProv[k]); }
       });
     }
-
-    toolbar.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-      cb.addEventListener('change', applyFilters);
-    });
-    applyFilters(); // init
+    toolbar.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', applyFilters));
+    applyFilters();
 
   } catch (e) {
     console.error(e);
-    const root = document.getElementById('map');
-    root.innerHTML = `<div style="padding:12px;font-family:system-ui,Segoe UI,Roboto,Arial">Erreur de chargement des données.<br><small>${e.message}</small></div>`;
+    document.getElementById('map').innerHTML =
+      `<div style="padding:12px;font-family:system-ui,Segoe UI,Roboto,Arial">Erreur de chargement des données.<br><small>${e.message}</small></div>`;
   }
 })();
