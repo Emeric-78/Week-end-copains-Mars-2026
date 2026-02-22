@@ -74,3 +74,51 @@ html, body {
   gap: 6px;
   margin-right: 10px;
 }
+
+/* Pastilles textes (P1, P2...) pour provenances */
+.icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px rgba(0,0,0,.15);
+}
+
+/* Couleurs par état */
+.prov-oui { background: #059669; }       /* participants – vert */
+.prov-non { background: #94a3b8; color:#1f2937; } /* non – gris (texte sombre) */
+.prov-incertain { background: #f59e0b; } /* incertains – ambre */
+
+/* Marqueurs "lieux" (gîtes) déjà gérés par .mk .dot ; on garde */
+.mk .dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(0,0,0,.15);
+}
+
+/* Panneau filtres */
+.toolbar {
+  position: absolute;
+  z-index: 1000;
+  top: 10px;
+  right: 10px;
+  background: #fff;
+  padding: 10px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  font-size: 13px;
+  max-width: min(92vw, 520px);
+}
+.toolbar .block { margin-top: 6px; }
+.toolbar .block:first-child { margin-top: 0; }
+.toolbar .ttl { font-weight: 600; margin-right: 8px; }
+.toolbar label { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; margin-top: 4px; }
