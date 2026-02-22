@@ -20,12 +20,15 @@
 
   <div id="map"></div>
 
-  <!-- Leaflet JS (balise correcte) -->
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
+  <!-- Panneau de filtres (affiché par-dessus la carte) -->
+  <div class="toolbar">
+    <strong>Filtres :</strong>
+    <label><input type="checkbox" id="f_prov_on" checked> Provenances – participants</label>
+    <label><input type="checkbox" id="f_prov_off" checked> Provenances – non participants</label>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <!-- Logique de la carte -->
   <script src="js/carte.js"></script>
