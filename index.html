@@ -1,60 +1,24 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Carte interactive</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Leaflet CSS -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
+  https://unpkg.com/leaflet@1.9.4/dist/leaflet.css
 
-  <!-- Style de la page -->
-  <style>
-    html, body {
-      margin: 0;
-      height: 100%;
-    }
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-  </style>
+  <!-- Style de la carte -->
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
 
   <div id="map"></div>
 
   <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  https://unpkg.com/leaflet@1.9.4/dist/leaflet.js</script>
 
-<script>
-  // Initialisation de la carte
-  const map = L.map('map').setView([48.8566, 2.3522], 12);
-
-  // Fond de carte
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
-  }).addTo(map);
-
-  // Chargement des lieux depuis le fichier JSON
-  fetch('data/lieux.json')
-    .then(response => response.json())
-    .then(lieux => {
-      lieux.forEach(lieu => {
-        L.marker([lieu.latitude, lieu.longitude])
-          .addTo(map)
-          .bindPopup(
-            `<strong>${lieu.nom}</strong><br>${lieu.description}`
-          );
-      });
-    })
-    .catch(error => {
-      console.error('Erreur de chargement des lieux :', error);
-    });
-</script>
-
+  <!-- Logique de la carte -->
+  <script src="js/carte.js"></script>
 </body>
 </html>
