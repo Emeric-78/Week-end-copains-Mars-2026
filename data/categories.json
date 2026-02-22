@@ -23,10 +23,5 @@
     "id": "attente",
     "libelle": "Non répondu / En attente",
     "couleur": "#9CA3AF"
-  },
-  {
-    "id": "provenance",
-    "libelle": "Provenance (participants)",
-    "couleur": "#059669"
   }
 ]
