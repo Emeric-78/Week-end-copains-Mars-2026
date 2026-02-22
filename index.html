@@ -30,21 +30,31 @@
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <script>
-    // Initialisation de la carte
-    const map = L.map('map').setView([48.8566, 2.3522], 12);
+<script>
+  // Initialisation de la carte
+  const map = L.map('map').setView([48.8566, 2.3522], 12);
 
-    // Fond de carte OpenStreetMap
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+  // Fond de carte
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
 
-    // Marqueur de test
-    L.marker([48.8566, 2.3522])
-      .addTo(map)
-      .bindPopup('Premier point sur la carte')
-      .openPopup();
-  </script>
+  // Chargement des lieux depuis le fichier JSON
+  fetch('data/lieux.json')
+    .then(response => response.json())
+    .then(lieux => {
+      lieux.forEach(lieu => {
+        L.marker([lieu.latitude, lieu.longitude])
+          .addTo(map)
+          .bindPopup(
+            `<strong>${lieu.nom}</strong><br>${lieu.description}`
+          );
+      });
+    })
+    .catch(error => {
+      console.error('Erreur de chargement des lieux :', error);
+    });
+</script>
 
 </body>
 </html>
