@@ -20,12 +20,8 @@
 
   <div id="map"></div>
 
-  <!-- Panneau de filtres (affiché par-dessus la carte) -->
-  <div class="toolbar">
-    <strong>Filtres :</strong>
-    <label><input type="checkbox" id="f_prov_on" checked> Provenances – participants</label>
-    <label><input type="checkbox" id="f_prov_off" checked> Provenances – non participants</label>
-  </div>
+  <!-- Panneau de filtres (rempli dynamiquement par carte.js) -->
+  <div id="toolbar" class="toolbar"></div>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
