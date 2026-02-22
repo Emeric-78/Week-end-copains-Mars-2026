@@ -16,7 +16,7 @@ html, body { margin:0; height:100%; }
   background:#fff; padding:8px 12px; border-radius:8px;
   box-shadow:0 2px 8px rgba(0,0,0,.15);
   font-weight:600; font-size:15px; color:#111827;
-  pointer-events:none; /* pour ne pas gêner les clics sur la carte */
+  pointer-events:none;
 }
 
 /* =========================
@@ -92,7 +92,7 @@ html, body { margin:0; height:100%; }
 .swatch.prov-incertain { background:#f59e0b; }
 
 /* =========================
-   (Optionnel) style popups Leaflet un peu plus lisibles
+   (Optionnel) popups un peu plus lisibles
    ========================= */
 .leaflet-popup-content {
   font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif;
