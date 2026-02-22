@@ -5,13 +5,8 @@
   <title>Carte interactive</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Leaflet CSS (balise correcte) -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
   <!-- Style de la carte -->
   <link rel="stylesheet" href="css/style.css" />
@@ -20,8 +15,10 @@
 
   <div id="map"></div>
 
-  <!-- Panneau de filtres (rempli dynamiquement par carte.js) -->
-  <div id="toolbar" class="toolbar"></div>
+  <!-- Bouton pour afficher/masquer le panneau (UX mobile) -->
+  <button id="toggleToolbar" class="toolbar-toggle" aria-controls="toolbar" aria-expanded="false">☰ Filtres</button>
+  <!-- Panneau unique légende+filtres (rempli par JS) -->
+  <div id="toolbar" class="toolbar hidden" role="region" aria-label="Légende et filtres"></div>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
