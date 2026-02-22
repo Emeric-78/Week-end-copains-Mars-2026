@@ -45,3 +45,32 @@ html, body {
   font-weight: 600;
   font-size: 14px;
 }
+
+/* Marqueurs provenances */
+.mk-prov .dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(0,0,0,.15);
+}
+.mk-prov.on .dot { background: #059669; }   /* participants (vert) */
+.mk-prov.off .dot { background: #94a3b8; }  /* non participants (gris) */
+
+/* Panneau filtres */
+.toolbar {
+  position: absolute;
+  z-index: 1000;
+  top: 10px;
+  right: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  font-size: 13px;
+}
+.toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 10px;
+}
