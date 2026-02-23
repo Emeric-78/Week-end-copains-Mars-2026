@@ -106,35 +106,3 @@ function el(tag, attrs={}, html='') {
     // Helpers popup (capacité + statut)
     function computeCapaciteLabel(lieu) {
       if (lieu.capacite && String(lieu.capacite).trim()) return String(lieu.capacite).trim();
-      return ''; // fallback : on n’invente rien si non fourni (proviendra de l’Excel > JSON)
-    }
-    function computeStatut(lieu) {
-      return catToStatut[lieu.categorie] || '';
-    }
-
-    // Ajout gîtes (géocodage : adresse > ville(dept))
-    async function addLieu(lieu) {
-      const cat = catIndex[lieu.categorie] || { id:'autre', libelle:'Autre', couleur:'#2563EB' };
-      if (!gByCat[cat.id]) gByCat[cat.id] = L.featureGroup().addTo(map);
-
-      let ll = null;
-      if (lieu.adresse) ll = await geocode(lieu.adresse);
-      if (!ll && lieu.ville_dept) ll = await geocode(normalizeVilleDept(lieu.ville_dept));
-      if (!ll) { console.warn('[Lieu ignoré]', lieu); return; }
-
-      const icon = L.divIcon({
-        className:'mk-lieu',
-        html:`<span class="pin" style="background:${cat.couleur}">${(lieu.id||'')}</span>`,
-        iconSize:[24,24], iconAnchor:[12,12], popupAnchor:[0,-12]
-      });
-
-      const nom = (lieu.nom || '').trim();
-      const titre = `<strong>n°${lieu.id} — ${nom}</strong>`;
-      const place = lieu.adresse ? lieu.adresse : (lieu.ville_dept || '');
-
-      const capaciteTxt = computeCapaciteLabel(lieu);
-      const statutTxt   = computeStatut(lieu);
-      const ligneFusion = (capaciteTxt || statutTxt)
-        ? `<em>${capaciteTxt ? 'Capacité : ' + capaciteTxt + (statutTxt ? ' — ' : '') : ''}${statutTxt || ''}</em>`
-        : '';
-
