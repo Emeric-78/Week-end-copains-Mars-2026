@@ -74,7 +74,7 @@ function el(tag, attrs={}, html='') {
     const etatToClass = { 'oui':'prov-oui', 'non':'prov-non', 'incertain':'prov-incertain' };
     const etatToLib   = { 'oui':'Participant', 'non':'Non participant', 'incertain':'Incertain' };
 
-    // Ajout provenances (sécurisé, fallback géocodage sur adresse)
+    // Ajout provenances
     async function addProvenance(p) {
       const etat = (p.etat || 'oui').toLowerCase();
       const grp = gProv[etat] || gProv['oui'];
@@ -103,6 +103,15 @@ function el(tag, attrs={}, html='') {
       'contraintes': 'Disponible / répartition couchages avec contraintes'
     };
 
+    // Helpers popup (capacité + statut)
+    function computeCapaciteLabel(lieu) {
+      if (lieu.capacite && String(lieu.capacite).trim()) return String(lieu.capacite).trim();
+      return ''; // fallback : on n’invente rien si non fourni (proviendra de l’Excel > JSON)
+    }
+    function computeStatut(lieu) {
+      return catToStatut[lieu.categorie] || '';
+    }
+
     // Ajout gîtes (géocodage : adresse > ville(dept))
     async function addLieu(lieu) {
       const cat = catIndex[lieu.categorie] || { id:'autre', libelle:'Autre', couleur:'#2563EB' };
@@ -122,100 +131,10 @@ function el(tag, attrs={}, html='') {
       const nom = (lieu.nom || '').trim();
       const titre = `<strong>n°${lieu.id} — ${nom}</strong>`;
       const place = lieu.adresse ? lieu.adresse : (lieu.ville_dept || '');
-      const disponibilite = `<em>${catToDispon[lieu.categorie] || ''}</em>`;
-      const verdict = `<div><strong>Analyse :</strong> ${catToVerdict[lieu.categorie] || ''}</div>`;
-      const resume = lieu.description ? `<div style="margin-top:6px">${lieu.description}</div>` : '';
-      const tarif = lieu.tarif ? `<div style="margin-top:6px"><strong>Tarif :</strong> ${lieu.tarif}</div>` : '';
-      const lienAnnonce = lieu.lien ? `<a href="${lieu.lien}" target="_blank" rel="noopener">Voir l’annonce</a>` : '';
-      const lienSite = lieu.site ? ` &nbsp;|&nbsp; <a href="${lieu.site}" target="_blank" rel="noopener">Site du gîte</a>` : '';
-      const liens = (lienAnnonce || lienSite) ? `<div style="margin-top:6px">${lienAnnonce}${lienSite}</div>` : '';
 
-      const html = [
-        titre,
-        `<div>${place}</div>`,
-        `<div style="margin-top:6px">${disponibilite}</div>`,
-        `<div style="margin-top:6px">${verdict}</div>`,
-        resume,
-        tarif,
-        liens
-      ].join('');
+      const capaciteTxt = computeCapaciteLabel(lieu);
+      const statutTxt   = computeStatut(lieu);
+      const ligneFusion = (capaciteTxt || statutTxt)
+        ? `<em>${capaciteTxt ? 'Capacité : ' + capaciteTxt + (statutTxt ? ' — ' : '') : ''}${statutTxt || ''}</em>`
+        : '';
 
-      L.marker(ll, { icon }).addTo(gByCat[cat.id]).bindPopup(html);
-    }
-    for (const Lieu of (lieux || [])) { await addLieu(Lieu); }
-
-    // Ajustement vue global
-    const all = L.featureGroup([...Object.values(gByCat), ...Object.values(gProv)]).addTo(map);
-    if (all.getLayers().length) map.fitBounds(all.getBounds().pad(0.2));
-
-    // ===== Panneau fusionné (bas-gauche) =====
-    const toolbar = document.getElementById('toolbar');
-    const tbBody  = document.getElementById('tbBody');
-    const tbBtn   = document.getElementById('tbToggle');
-
-    // Contenu : Catégories
-    const s1 = el('div',{class:'section'});
-    s1.append(el('div',{class:'ttl'},'Catégories'));
-    const row1 = el('div',{class:'row'});
-    categories.forEach(c=>{
-      const id = `flt_cat_${c.id}`;
-      const lab = el('label',{class:'label-chip'},
-        `<input type="checkbox" id="${id}" data-cat="${c.id}" checked>
-         <span class="swatch" style="background:${c.couleur}"></span> ${c.libelle}`);
-      row1.append(lab);
-    });
-    s1.append(row1);
-    tbBody.append(s1);
-
-    // Contenu : Provenances
-    const s2 = el('div',{class:'section'});
-    s2.append(el('div',{class:'ttl'},'Provenances'));
-    const row2 = el('div',{class:'row'});
-    [
-      {k:'oui', txt:'Participants', cls:'prov-oui'},
-      {k:'incertain', txt:'Incertains', cls:'prov-incertain'},
-      {k:'non', txt:'Non participants', cls:'prov-non'}
-    ].forEach(p=>{
-      const id = `flt_prov_${p.k}`;
-      const lab = el('label',{class:'label-chip'},
-        `<input type="checkbox" id="${id}" data-prov="${p.k}" checked>
-         <span class="swatch ${p.cls}"></span> ${p.txt}`);
-      row2.append(lab);
-    });
-    s2.append(row2);
-    tbBody.append(s2);
-
-    // Filtres
-    function applyFilters() {
-      categories.forEach(c=>{
-        const cb = tbBody.querySelector(`input[data-cat="${c.id}"]`);
-        if (!cb) return;
-        if (cb.checked) map.addLayer(gByCat[c.id]); else map.removeLayer(gByCat[c.id]);
-      });
-      Object.keys(gProv).forEach(k=>{
-        const cb = tbBody.querySelector(`input[data-prov="${k}"]`);
-        if (!cb) return;
-        if (cb.checked) map.addLayer(gProv[k]); else map.removeLayer(gProv[k]);
-      });
-    }
-    tbBody.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', applyFilters));
-    applyFilters();
-
-    // Toggle (− / ▾)
-    function setCollapsed(collapsed){
-      toolbar.classList.toggle('collapsed', collapsed);
-      tbBtn.setAttribute('aria-expanded', (!collapsed).toString());
-      tbBtn.textContent = collapsed ? '−' : '▾';
-    }
-    tbBtn.addEventListener('click', ()=> setCollapsed(!toolbar.classList.contains('collapsed')));
-    setCollapsed(true); // par défaut : replié
-
-  } catch (e) {
-    console.error(e);
-    document.getElementById('map').innerHTML =
-      `<div style="padding:12px;font-family:system-ui,Segoe UI,Roboto,Arial">
-         <strong>Erreur de chargement des données.</strong><br>
-         <small>${e.message}</small>
-       </div>`;
-  }
-})();
