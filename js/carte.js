@@ -157,39 +157,3 @@ function el(tag, attrs={}, html='') {
     }
     for (const Lieu of (lieux || [])) { await addLieu(Lieu); }
 
-    // Ajustement vue global
-    const all = L.featureGroup([...Object.values(gByCat), ...Object.values(gProv)]).addTo(map);
-    if (all.getLayers().length) map.fitBounds(all.getBounds().pad(0.2));
-
-    // ===== Panneau fusionné (bas-gauche) =====
-    const toolbar = document.getElementById('toolbar');
-    const tbBody  = document.getElementById('tbBody');
-    const tbBtn   = document.getElementById('tbToggle');
-
-    // Contenu : Catégories
-    const s1 = el('div',{class:'section'});
-    s1.append(el('div',{class:'ttl'},'Catégories'));
-    const row1 = el('div',{class:'row'});
-    categories.forEach(c=>{
-      const id = `flt_cat_${c.id}`;
-      const lab = el('label',{class:'label-chip'},
-        `<input type="checkbox" id="${id}" data-cat="${c.id}" checked>
-         <span class="swatch" style="background:${c.couleur}"></span> ${c.libelle}`);
-      row1.append(lab);
-    });
-    s1.append(row1);
-    tbBody.append(s1);
-
-    // Contenu : Provenances
-    const s2 = el('div',{class:'section'});
-    s2.append(el('div',{class:'ttl'},'Provenances'));
-    const row2 = el('div',{class:'row'});
-    [
-      {k:'oui', txt:'Participants', cls:'prov-oui'},
-      {k:'incertain', txt:'Incertains', cls:'prov-incertain'},
-      {k:'non', txt:'Non participants', cls:'prov-non'}
-    ].forEach(p=>{
-      const id = `flt_prov_${p.k}`;
-      const lab = el('label',{class:'label-chip'},
-        `<input type="checkbox" id="${id}" data-prov="${p.k}" checked>
-         <span class="swatch ${p.cls}"></span> ${p.txt}`);
