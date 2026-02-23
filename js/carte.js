@@ -106,3 +106,90 @@ function el(tag, attrs={}, html='') {
     // Helpers popup (capacité + statut)
     function computeCapaciteLabel(lieu) {
       if (lieu.capacite && String(lieu.capacite).trim()) return String(lieu.capacite).trim();
+      return ''; // sera rempli par le JSON généré depuis Excel
+    }
+    function computeStatut(lieu) {
+      return catToStatut[lieu.categorie] || '';
+    }
+
+    // Ajout gîtes (géocodage : adresse > ville(dept))
+    async function addLieu(lieu) {
+      const cat = catIndex[lieu.categorie] || { id:'autre', libelle:'Autre', couleur:'#2563EB' };
+      if (!gByCat[cat.id]) gByCat[cat.id] = L.featureGroup().addTo(map);
+
+      let ll = null;
+      if (lieu.adresse) ll = await geocode(lieu.adresse);
+      if (!ll && lieu.ville_dept) ll = await geocode(normalizeVilleDept(lieu.ville_dept));
+      if (!ll) { console.warn('[Lieu ignoré]', lieu); return; }
+
+      const icon = L.divIcon({
+        className:'mk-lieu',
+        html:`<span class="pin" style="background:${cat.couleur}">${(lieu.id||'')}</span>`,
+        iconSize:[24,24], iconAnchor:[12,12], popupAnchor:[0,-12]
+      });
+
+      const nom = (lieu.nom || '').trim();
+      const titre = `<strong>n°${lieu.id} — ${nom}</strong>`;
+      const place = lieu.adresse ? lieu.adresse : (lieu.ville_dept || '');
+
+      const capaciteTxt = computeCapaciteLabel(lieu);
+      const statutTxt   = computeStatut(lieu);
+      const ligneFusion = (capaciteTxt || statutTxt)
+        ? `<em>${capaciteTxt ? 'Capacité : ' + capaciteTxt + (statutTxt ? ' — ' : '') : ''}${statutTxt || ''}</em>`
+        : '';
+
+      const resume = lieu.description ? `<div style="margin-top:6px">${lieu.description}</div>` : '';
+      const tarif  = lieu.tarif ? `<div style="margin-top:6px"><strong>Tarif :</strong> ${lieu.tarif}</div>` : '';
+      const lienAnnonce = lieu.lien ? `${lieu.lien}Voir l’annonce</a>` : '';
+      const lienSite    = lieu.site ? ` &nbsp;|&nbsp; ${lieu.site}Site du gîte</a>` : '';
+      const liens = (lienAnnonce || lienSite) ? `<div style="margin-top:6px">${lienAnnonce}${lienSite}</div>` : '';
+
+      const html = [
+        titre,
+        `<div>${place}</div>`,
+        (ligneFusion ? `<div style="margin-top:6px">${ligneFusion}</div>` : ''),
+        resume,
+        tarif,
+        liens
+      ].join('');
+
+      L.marker(ll, { icon }).addTo(gByCat[cat.id]).bindPopup(html);
+    }
+    for (const Lieu of (lieux || [])) { await addLieu(Lieu); }
+
+    // Ajustement vue global
+    const all = L.featureGroup([...Object.values(gByCat), ...Object.values(gProv)]).addTo(map);
+    if (all.getLayers().length) map.fitBounds(all.getBounds().pad(0.2));
+
+    // ===== Panneau fusionné (bas-gauche) =====
+    const toolbar = document.getElementById('toolbar');
+    const tbBody  = document.getElementById('tbBody');
+    const tbBtn   = document.getElementById('tbToggle');
+
+    // Contenu : Catégories
+    const s1 = el('div',{class:'section'});
+    s1.append(el('div',{class:'ttl'},'Catégories'));
+    const row1 = el('div',{class:'row'});
+    categories.forEach(c=>{
+      const id = `flt_cat_${c.id}`;
+      const lab = el('label',{class:'label-chip'},
+        `<input type="checkbox" id="${id}" data-cat="${c.id}" checked>
+         <span class="swatch" style="background:${c.couleur}"></span> ${c.libelle}`);
+      row1.append(lab);
+    });
+    s1.append(row1);
+    tbBody.append(s1);
+
+    // Contenu : Provenances
+    const s2 = el('div',{class:'section'});
+    s2.append(el('div',{class:'ttl'},'Provenances'));
+    const row2 = el('div',{class:'row'});
+    [
+      {k:'oui', txt:'Participants', cls:'prov-oui'},
+      {k:'incertain', txt:'Incertains', cls:'prov-incertain'},
+      {k:'non', txt:'Non participants', cls:'prov-non'}
+    ].forEach(p=>{
+      const id = `flt_prov_${p.k}`;
+      const lab = el('label',{class:'label-chip'},
+        `<input type="checkbox" id="${id}" data-prov="${p.k}" checked>
+         <span class="swatch ${p.cls}"></span> ${p.txt}`);
