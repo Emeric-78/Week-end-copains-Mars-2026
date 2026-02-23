@@ -41,7 +41,7 @@
   ></script>
 
   <!-- Logique -->
-  <script>
+<script>
 /* ===== Helpers ===== */
 async function loadJSON(u){const r=await fetch(u);if(!r.ok)throw new Error(`Erreur de chargement: ${u}`);return r.json();}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -56,6 +56,8 @@ async function geocode(q){if(!q)return null;const K=`geo:${q}`,C=fromCache(K);if
   if(Array.isArray(js)&&js.length){const ll=[+js[0].lat,+js[0].lon];toCache(K,ll);await sleep(900);return ll}
   await sleep(900);console.warn('[Geocode] Aucune coordonnée pour',q);return null;}
 function el(t,a={},h=''){const d=document.createElement(t);Object.entries(a).forEach(([k,v])=>d.setAttribute(k,v));if(h)d.innerHTML=h;return d}
+const norm=(s)=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const a = (href, txt) => `<a href="${href}" target="_blank" rel="noopener">${txt}</a>`;
 
 /* ===== App ===== */
 (async()=>{try{
@@ -101,27 +103,37 @@ function el(t,a={},h=''){const d=document.createElement(t);Object.entries(a).for
 
   /* Lieux */
   for(const Lieu of (lieux||[])){
-    const cat=catIndex[Lieu.categorie]||{id:'autre',libelle:'Autre',couleur:'#2563EB'};
+    // Catégorie "effective" : si le texte contient "à vérifier" -> passe en 'limite'
+    const raw = norm((Lieu.description||'') + ' ' + (Lieu.analyse||'')); // accepte un champ 'analyse' s'il est ajouté plus tard
+    const hasAVerifier = raw.includes('a verifier');
+    const effectiveCatId = (hasAVerifier && Lieu.categorie==='contraintes') ? 'limite' : (Lieu.categorie||'autre');
+    const cat = catIndex[effectiveCatId] || {id:'autre',libelle:'Autre',couleur:'#2563EB'};
     if(!gByCat[cat.id]) gByCat[cat.id]=L.featureGroup().addTo(map);
 
-    let ll=null;if(Lieu.adresse) ll=await geocode(Lieu.adresse);
+    // Géocodage
+    let ll=null;
+    if(Lieu.adresse) ll=await geocode(Lieu.adresse);
     if(!ll && Lieu.ville_dept) ll=await geocode(normalizeVilleDept(Lieu.ville_dept));
     if(!ll){console.warn('[Lieu ignoré]',Lieu);continue}
 
-    const icon=L.divIcon({className:'mk-lieu',html:`<span class="pin" style="background:${cat.couleur}">${Lieu.id||''}</span>`,
-      iconSize:[24,24],iconAnchor:[12,12],popupAnchor:[0,-12]});
+    // Icône + popup
+    const icon=L.divIcon({className:'mk-lieu',html:`<span class="pin" style="background:${cat.couleur}">${Lieu.id||''}</span>`,iconSize:[24,24],iconAnchor:[12,12],popupAnchor:[0,-12]});
 
     const nom=(Lieu.nom||'').trim(), titre=`<strong>n°${Lieu.id} — ${nom}</strong>`;
     const place=Lieu.adresse?Lieu.adresse:(Lieu.ville_dept||'');
-    const cap=capaciteOf(Lieu), statut=catToStatut[Lieu.categorie]||'';
+    const cap=capaciteOf(Lieu), statut=catToStatut[effectiveCatId]||'';
     const fuse=(cap||statut)? `<em>${cap?('Capacité : '+cap+(statut?' — ':'')) : ''}${statut||''}</em>` : '';
     const resume=Lieu.description? `<div style="margin-top:6px">${Lieu.description}</div>` : '';
     const tarif=Lieu.tarif? `<div style="margin-top:6px"><strong>Tarif :</strong> ${Lieu.tarif}</div>` : '';
-    const lienAnnonce=Lieu.lien? `${Lieu.lien}Voir l’annonce</a>` : '';
-    const lienSite=Lieu.site? ` &nbsp;|&nbsp; ${Lieu.site}Site du gîte</a>` : '';
-    const liens=(lienAnnonce||lienSite)? `<div style="margin-top:6px">${lienAnnonce}${lienSite}</div>` : '';
-    const html=[titre,`<div>${place}</div>`,(fuse?`<div style="margin-top:6px">${fuse}</div>`:''),resume,tarif,liens].join('');
 
+    // 🔗 Liens cliquables
+    const lienAnnonce = Lieu.lien ? a(Lieu.lien, 'Voir l’annonce') : '';
+    const lienSite    = Lieu.site ? a(Lieu.site, 'Site du gîte')    : '';
+    const liens = (lienAnnonce || lienSite)
+      ? `<div style="margin-top:6px">${lienAnnonce}${(lienAnnonce && lienSite ? ' &nbsp;|&nbsp; ' : '')}${lienSite}</div>`
+      : '';
+
+    const html=[titre,`<div>${place}</div>`,(fuse?`<div style="margin-top:6px">${fuse}</div>`:''),resume,tarif,liens].join('');
     L.marker(ll,{icon}).addTo(gByCat[cat.id]).bindPopup(html);
   }
 
@@ -150,10 +162,18 @@ function el(t,a={},h=''){const d=document.createElement(t);Object.entries(a).for
   s2.append(row2); tbBody.append(s2);
 
   function applyFilters(){
-    cats.forEach(c=>{const cb=tbBody.querySelector(`input[data-cat="${c.id}"]`); if(!cb)return; cb.checked? map.addLayer(gByCat[c.id]) : map.removeLayer(gByCat[c.id]);});
-    Object.keys(gProv).forEach(k=>{const cb=tbBody.querySelector(`input[data-prov="${k}"]`); if(!cb)return; cb.checked? map.addLayer(gProv[k]) : map.removeLayer(gProv[k]);});
+    cats.forEach(c=>{
+      const cb=tbBody.querySelector(`input[data-cat="${c.id}"]`); if(!cb)return;
+      cb.checked? map.addLayer(gByCat[c.id]) : map.removeLayer(gByCat[c.id]);
+    });
+    Object.keys(gProv).forEach(k=>{
+      const cb=tbBody.querySelector(`input[data-prov="${k}"]`); if(!cb)return;
+      cb.checked? map.addLayer(gProv[k]) : map.removeLayer(gProv[k]);
+    });
   }
-  tbBody.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.addEventListener('change',applyFilters)); applyFilters();
+  tbBody.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.addEventListener('change',applyFilters));
+  applyFilters();
+
   function setCollapsed(x){ toolbar.classList.toggle('collapsed',x); tbBtn.setAttribute('aria-expanded',(!x).toString()); tbBtn.textContent=x?'−':'▾'; }
   tbBtn.addEventListener('click',()=>setCollapsed(!toolbar.classList.contains('collapsed'))); setCollapsed(true);
 }catch(e){
@@ -165,5 +185,6 @@ function el(t,a={},h=''){const d=document.createElement(t);Object.entries(a).for
    </div>`;
 }})();
 </script>
+
 </body>
 </html>
