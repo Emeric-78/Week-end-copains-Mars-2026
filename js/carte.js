@@ -212,7 +212,7 @@ function el(tag, attrs={}, html='') {
     function setCollapsed(collapsed){
       toolbar.classList.toggle('collapsed', collapsed);
       tbBtn.setAttribute('aria-expanded', (!collapsed).toString());
-      tbBtn.textContent = collapsed ? '▾' : '−';
+      tbBtn.textContent = collapsed ? '−' : '▾';
     }
     tbBtn.addEventListener('click', ()=> setCollapsed(!toolbar.classList.contains('collapsed')));
     setCollapsed(true); // par défaut : replié
