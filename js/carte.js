@@ -94,20 +94,13 @@ function el(tag, attrs={}, html='') {
     }
     for (const p of (provsRaw || [])) { await addProvenance(p); }
 
-    // Libellés disponibilité/verdict selon catégorie (en attendant les champs dédiés depuis Excel)
-    const catToDispon = {
-      'indispo':'Indisponible',
-      'attente':'En attente de réponse',
-      'ideal':'Disponible',
-      'limite':'Disponible (à vérifier)',
-      'contraintes':'Disponible (avec contraintes)'
-    };
-    const catToVerdict = {
-      'indispo':'Indisponible',
-      'attente':'En attente',
-      'ideal':'Idéal',
-      'limite':'Limite à vérifier',
-      'contraintes':'Avec contraintes'
+    // Statut fusionné (disponibilité + verdict)
+    const catToStatut = {
+      'indispo':     'Indisponible',
+      'attente':     'En attente de réponse',
+      'ideal':       'Disponible / composition couchages idéale',
+      'limite':      'Disponible / correspondance couchages à vérifier',
+      'contraintes': 'Disponible / répartition couchages avec contraintes'
     };
 
     // Ajout gîtes (géocodage : adresse > ville(dept))
