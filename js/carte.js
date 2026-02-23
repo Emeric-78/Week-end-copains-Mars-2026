@@ -208,7 +208,7 @@ function el(tag, attrs={}, html='') {
     tbBody.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.addEventListener('change', applyFilters));
     applyFilters();
 
-    // Toggle (▾ / −)
+    // Toggle (− / ▾)
     function setCollapsed(collapsed){
       toolbar.classList.toggle('collapsed', collapsed);
       tbBtn.setAttribute('aria-expanded', (!collapsed).toString());
